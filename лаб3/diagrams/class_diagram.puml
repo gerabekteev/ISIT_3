@@ -1,0 +1,101 @@
+@startuml
+' Диаграмма кода (Level 4): паттерн «Стратегия» в компоненте «Сервис прогнозирования»
+' Карточки сокращены для читаемости; полные типизированные сигнатуры — в модулях src/forecasting
+title Диаграмма классов компонента «Сервис прогнозирования» — DemoScope (Level 4)
+
+interface ForecastStrategy <<abstract>> {
+  + {abstract} forecast(series, horizon) : ForecastResult
+  .. контракт ..
+  name : str
+}
+
+class ForecastContext {
+  - _strategy : ForecastStrategy
+  + strategy_name : str {readOnly}
+  + __init__(strategy)
+  + set_strategy(strategy) : None
+  + run_forecast(series, horizon) : ForecastResult
+}
+
+class HoltWintersStrategy {
+  + name : str = "holt_winters"
+  + forecast(series, horizon) : ForecastResult
+  - _select_model(y) : tuple
+  - _fit(y, params) : tuple
+  .. сеточный подбор alpha, beta, phi по AIC ..
+}
+
+class ArimaStrategy {
+  + name : str = "arima"
+  + forecast(series, horizon) : ForecastResult
+  + {static} _trend_correlation(series) : float
+  + {static} _difference(series, d) : list[float]
+  + {static} _integrate(last_value, diffs, d) : list[float]
+  + {static} _fit_ar(series, p) : tuple
+  + {static} _solve_gauss(a, b) : list[float]
+  .. ARIMA(p,d,0): d — по тренду, p — по AIC ..
+}
+
+class CohortComponentStrategy {
+  - age_structure : Pyramid | None
+  - net_migration : float | None
+  - tfr : float
+  + __init__(age_structure, net_migration, tfr)
+  + forecast(series, horizon) : ForecastResult
+  - _project(pyramid, years, migration) : tuple
+  - _births(pyramid) : float
+  + {static} _advance(pyramid) : Pyramid
+  + {static} _survival(age, sex) : float
+  + {static} _apply_migration(pyramid, migration) : None
+  - _calibrate_migration(series, pyramid) : float
+  + {static} _synthesize_pyramid(total) : Pyramid
+}
+
+class TimeSeries <<dataclass>> {
+  + years : tuple[int, ...]
+  + values : tuple[float, ...]
+  + __post_init__() : None
+}
+
+class ForecastMetrics <<dataclass>> {
+  + mape : float
+  + rmse : float
+  + mae : float
+}
+
+class ForecastResult <<dataclass>> {
+  + model_name : str
+  + forecast_years : tuple[int, ...]
+  + forecast_values : tuple[float, ...]
+  + lower_ci : tuple[float, ...]
+  + upper_ci : tuple[float, ...]
+  + metrics : ForecastMetrics | None
+  + params : dict
+}
+
+note right of ForecastContext
+  Реестр алгоритмов ALGORITHMS
+  и декоратор register() живут
+  в модуле context.py
+end note
+
+note bottom of CohortComponentStrategy
+  Pyramid — алиас словаря
+  dict[str, dict[int, float]]
+end note
+
+' Контекст владеет ссылкой на стратегию (агрегация, ромб) и делегирует ей расчёт
+ForecastContext o-- "1" ForecastStrategy : делегирует forecast()
+
+' Конкретные стратегии реализуют интерфейс (Open/Closed)
+HoltWintersStrategy ..|> ForecastStrategy
+ArimaStrategy ..|> ForecastStrategy
+CohortComponentStrategy ..|> ForecastStrategy
+
+' Контракты данных: стратегии принимают ряд и возвращают единый результат
+ForecastStrategy ..> TimeSeries : принимает
+ForecastStrategy ..> ForecastResult : возвращает
+ForecastContext ..> TimeSeries : принимает
+ForecastContext ..> ForecastResult : возвращает
+ForecastResult o-- "0..1" ForecastMetrics : метрики качества
+@enduml

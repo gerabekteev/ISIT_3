@@ -1,0 +1,37 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+' Горизонтальная раскладка — диаграмма помещается на страницу отчёта
+LAYOUT_LEFT_RIGHT()
+LAYOUT_WITH_LEGEND()
+
+title Контейнеры DemoScope (Level 2) — мониторинг и прогнозирование динамики населения РФ
+
+' === Пользователи ===
+Person(analyst, "Демограф-аналитик", "Наблюдает показатели, сравнивает субъекты, строит прогнозы")
+Person(official, "Сотрудник органа гос. управления", "Опирается на радар проблем и отчётные материалы")
+
+' === Контейнеры системы ===
+System_Boundary(demoscope, "DemoScope") {
+  Container(web_app, "Веб-приложение (SPA)", "React 19 / Vite, Three.js, Recharts, Leaflet", "SPA-клиент: 3D-глобус, тепловые карты, дашборды, графики, сравнение территорий")
+  Container(mobile_app, "Мобильное приложение", "React Native", "Мобильный доступ к мониторингу и прогнозам через единый REST API")
+  Container(api_backend, "Backend API", "Python 3.10 / FastAPI, Pandas, PyArrow", "Серверное ядро: REST API мониторинга, сравнения, прогнозирования (Holt-Winters, ARIMA), отчёты, интеграция с LLM")
+  Container(data_pipeline, "Конвейер подготовки данных", "Python / Pandas, gdown", "Служебный конвейер: выгрузка исходников, очистка, конвертация CSV в Parquet, геомаппинг")
+  ContainerDb(data_store, "Хранилище демографических данных", "Parquet / PyArrow (озеро данных)", "Массивы Росстата и ЕМИСС: население, рождаемость, смертность, миграция (~6 ГБ)")
+  ContainerDb(db_service, "Служебная БД", "PostgreSQL 16", "Учётные записи, сессии, история отчётов, кэш прогнозов")
+}
+
+' === Внешние системы ===
+System_Ext(gemini_api, "Google Gemini API", "Сторонний LLM-сервис аналитических текстов (Gemini 2.5 Flash)")
+System_Ext(gdrive, "Google Drive", "Внешнее хранилище исходных CSV-массивов")
+
+' === Связи с протоколами взаимодействия ===
+Rel(analyst, web_app, "Использование дашбордов и прогнозов", "HTTPS")
+Rel(official, web_app, "Получение отчётных материалов и радара проблем", "HTTPS")
+Rel(web_app, api_backend, "HTTP-запросы к REST API (/api/population, /api/forecast и др.)", "HTTPS/JSON")
+Rel(mobile_app, api_backend, "HTTP-запросы к REST API", "HTTPS/JSON")
+Rel(api_backend, data_store, "Чтение данных и агрегатов", "Файловый I/O (Parquet)")
+Rel(api_backend, db_service, "Обмен служебными данными (аккаунты, сессии, кэш)", "SQL/TCP 5432")
+Rel(data_pipeline, data_store, "Выгрузка подготовленных данных", "Файловый I/O (Parquet)")
+Rel(data_pipeline, gdrive, "Скачивание исходных CSV", "HTTPS (gdown)")
+Rel(api_backend, gemini_api, "Вызов генерации аналитического заключения", "HTTPS/JSON (REST)")
+@enduml

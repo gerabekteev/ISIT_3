@@ -1,0 +1,13 @@
+# Локальный PlantUML Server (методичка, раздел 3.2, пункт 3).
+# Отрисовка диаграмм происходит локально в контейнере — исходники .puml
+# не отправляются на публичные серверы (требование конфиденциальности).
+# Запуск: start_lab.bat (или вручную: docker compose up -d)
+services:
+  plantuml-server:
+    # Версия закреплена под plantuml.jar 1.2023.10 (как в CI из методички, раздел 5).
+    image: plantuml/plantuml-server:jetty-v1.2023.10
+    container_name: plantuml-server
+    ports:
+      # На хосте 8080 занят Apache httpd, поэтому сервер вынесен на 8090.
+      - "8090:8080"
+    restart: unless-stopped

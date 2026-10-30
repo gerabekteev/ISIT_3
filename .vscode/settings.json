@@ -1,0 +1,13 @@
+{
+    // Предпросмотр диаграмм рендерится через ЛОКАЛЬНЫЙ PlantUML Server в Docker
+    // (методичка, раздел 3.2): исходники .puml не покидают твой компьютер.
+    // Сервер поднимается скриптом start_lab.bat (порт 8080).
+    "plantuml.render": "PlantUMLServer",
+    "plantuml.server": "http://localhost:8090",
+    "plantuml.previewFontSize": 14,
+
+    // Резервный вариант, если Docker не запущен: локальный jar + Graphviz.
+    // Закомментируй "plantuml.render" и "plantuml.server" выше и раскомментируй строки ниже.
+    // "plantuml.render": "Local",
+    // "plantuml.jar": "C:/Fvus/ИСИТ_3_семестр/tools/plantuml.jar"
+}

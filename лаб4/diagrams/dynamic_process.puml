@@ -1,0 +1,34 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+LAYOUT_WITH_LEGEND()
+
+title Динамическая диаграмма — сквозной сценарий «Построение прогноза численности населения региона»
+
+Person(analyst, "Демограф-аналитик", "Запускает расчёт прогноза")
+
+Container(web_app, "Веб-приложение (SPA)", "React 19 / Vite", "Клиентский интерфейс")
+
+Container_Boundary(api_backend, "Backend API (Python 3.10 / FastAPI)") {
+  Component(api_router, "API Router", "FastAPI Router, Pydantic", "Маршрутизация REST-запросов, валидация схем")
+  Component(forecast_comp, "Сервис прогнозирования", "Statsmodels", "Оркестрация алгоритмов прогнозирования")
+  Component(data_repo, "Репозиторий данных", "PyArrow / Parquet", "Слой доступа к озеру данных")
+  Component(db_repo, "Репозиторий служебной БД", "SQLAlchemy", "Слой доступа к служебной БД")
+}
+
+ContainerDb(data_store, "Хранилище демографических данных", "Parquet / PyArrow (озеро данных)", "Временные ряды Росстата и ЕМИСС")
+ContainerDb(db_service, "Служебная БД", "PostgreSQL 16", "Кэш результатов прогнозов")
+
+' === Хронология вызовов (последовательная нумерация 1-12) ===
+Rel(analyst, web_app, "1. Задаёт параметры прогноза: регион, горизонт, сценарий", "HTTPS")
+Rel(web_app, api_router, "2. Запрос прогноза (POST /api/forecast)", "HTTPS/JSON")
+Rel(api_router, forecast_comp, "3. Вызов run_forecast(region, horizon, model_type)", "Python Call")
+Rel(forecast_comp, db_repo, "4. Поиск результата в кэше прогнозов", "Python Call")
+Rel(db_repo, db_service, "5. Запрос SELECT по ключу прогноза", "SQL/TCP 5432")
+Rel(forecast_comp, data_repo, "6. Запрос исторического ряда", "Python Call")
+Rel(data_repo, data_store, "7. Чтение Parquet-фрагментов", "Файловый I/O (Parquet)")
+Rel(forecast_comp, db_repo, "8. Сохранение рассчитанного прогноза в кэш", "Python Call")
+Rel(db_repo, db_service, "9. Запрос INSERT в кэш прогнозов", "SQL/TCP 5432")
+Rel(forecast_comp, api_router, "10. Возврат структуры ForecastResult", "Python Call")
+Rel(api_router, web_app, "11. HTTP 200 OK: прогноз с доверительными интервалами", "HTTPS/JSON")
+Rel(web_app, analyst, "12. Отображение графика прогноза и доверительных интервалов", "HTTPS")
+@enduml

@@ -1,0 +1,35 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+' Горизонтальная раскладка — диаграмма помещается на страницу отчёта
+LAYOUT_LEFT_RIGHT()
+LAYOUT_WITH_LEGEND()
+
+title Контейнеры — ИС аналитического мониторинга и прогнозирования динамики населения РФ (DemoScope)
+
+' === Пользователи ===
+Person(analyst, "Демограф-аналитик", "Анализирует показатели, сравнивает регионы, получает прогнозы")
+Person(official, "Сотрудник органа гос. управления", "Работает с радаром проблем и отчётами")
+
+' === Контейнеры системы ===
+System_Boundary(demoscope, "DemoScope") {
+  Container(web_app, "Веб-приложение (SPA)", "React 19 / Vite, Three.js, Recharts, Leaflet", "Клиентский интерфейс: 3D-глобус, тепловые карты, дашборды, сопоставление территорий")
+  Container(mobile_app, "Мобильное приложение (планируемое)", "React Native", "Мобильный клиент мониторинга и прогнозов [To-Be]")
+  Container(api_backend, "Backend API", "Python 3.10 / FastAPI, Pandas, PyArrow", "Бизнес-логика: REST API мониторинга, сравнения, прогнозирования (Holt-Winters, ARIMA), отчёты, LLM-анализ")
+  Container(data_pipeline, "Конвейер подготовки данных", "Python / Pandas, gdown", "Подготовка данных: загрузка, очистка, конвертация CSV в Parquet, геомаппинг регионов")
+  ContainerDb(data_store, "Хранилище демографических данных", "Parquet / PyArrow (файловое)", "Показатели Росстата и ЕМИСС: население, рождаемость, смертность, миграция (~6 ГБ)")
+}
+
+' === Внешние системы ===
+System_Ext(gemini_api, "Google Gemini API", "Внешний LLM-сервис аналитических заключений (Gemini 2.5 Flash)")
+System_Ext(gdrive, "Google Drive", "Исходные массивы данных в формате CSV")
+
+' === Связи с протоколами взаимодействия ===
+Rel(analyst, web_app, "Работа с дашбордами и прогнозами", "HTTPS")
+Rel(official, web_app, "Получение отчётов и радара проблем", "HTTPS")
+Rel(web_app, api_backend, "Вызовы REST API (/api/population, /api/forecast и др.)", "HTTPS/JSON")
+Rel(mobile_app, api_backend, "Вызовы REST API [To-Be]", "HTTPS/JSON")
+Rel(api_backend, data_store, "Чтение показателей и агрегатов", "Файловый I/O (Parquet)")
+Rel(data_pipeline, data_store, "Запись подготовленных массивов", "Файловый I/O (Parquet)")
+Rel(data_pipeline, gdrive, "Загрузка исходных CSV-массивов", "HTTPS (gdown)")
+Rel(api_backend, gemini_api, "Запрос текста аналитического заключения", "HTTPS/JSON (REST)")
+@enduml

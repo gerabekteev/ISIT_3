@@ -1,0 +1,3 @@
+[submodule "лаб5/repo"]
+	path = лаб5/repo
+	url = https://github.com/gerabekteev/ISIT_3_lab5.git

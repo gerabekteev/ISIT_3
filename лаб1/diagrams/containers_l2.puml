@@ -1,0 +1,44 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+' Горизонтальная раскладка: диаграмма становится шире и ниже — корректно встаёт на страницу отчёта
+LAYOUT_LEFT_RIGHT()
+LAYOUT_WITH_LEGEND()
+
+title Диаграмма контейнеров — ИС аналитического мониторинга и прогнозирования динамики населения РФ (DemoScope)
+
+' === Пользователи ===
+Person(analyst, "Демограф-аналитик", "Мониторит показатели, сравнивает территории, строит прогнозы")
+Person(official, "Сотрудник органа гос. управления", "Использует радар проблем и аналитические отчёты")
+Person(researcher, "Исследователь / студент", "Изучает демографическую динамику, выгружает справки и отчёты")
+
+' === Контейнеры системы ===
+System_Boundary(demoscope, "DemoScope") {
+  Container(web_app, "Веб-приложение (SPA)", "React 19 / Vite, Three.js, Recharts, Leaflet", "Интерфейс аналитика: 3D-глобус, дашборды, графики, сравнение территорий")
+  Container(mobile_app, "Мобильное приложение", "React Native", "Доступ к мониторингу, радару проблем и прогнозам со смартфона через REST API")
+  Container(api_backend, "Backend API", "Python 3.10 / FastAPI, Pandas, PyArrow, Statsmodels", "REST API: мониторинг, сравнение, прогнозы (Holt-Winters, ARIMA), отчёты, LLM-анализ")
+  Container(data_pipeline, "Конвейер подготовки данных", "Python / Pandas, gdown", "Загрузка, очистка и конвертация исходных данных в Parquet, геомаппинг регионов")
+  ContainerDb(data_store, "Хранилище демографических данных", "Parquet / PyArrow (озеро данных)", "Показатели Росстата и ЕМИСС: население, рождаемость, смертность, миграция (~6 ГБ)")
+  ContainerDb(db_service, "Служебная БД", "PostgreSQL 16", "Учётные записи, сессии, история отчётов, кэш прогнозов")
+}
+
+' === Внешние системы ===
+System_Ext(rosstat, "Росстат", "Источник официальной демографической статистики")
+System_Ext(emiss, "ЕМИСС", "Государственная платформа статистических данных")
+System_Ext(gemini_api, "Google Gemini API", "LLM-сервис аналитических заключений (Gemini 2.5 Flash)")
+System_Ext(gdrive, "Google Drive", "Хранилище исходных массивов данных (CSV)")
+
+' === Связи (с протоколами взаимодействия) ===
+Rel(analyst, web_app, "Работает с дашбордами и прогнозами", "HTTPS")
+Rel(official, web_app, "Запрашивает отчёты и радар проблем", "HTTPS")
+Rel(official, mobile_app, "Просматривает радар проблем и прогнозы со смартфона", "HTTPS")
+Rel(researcher, web_app, "Изучает динамику, выгружает справки и отчёты", "HTTPS")
+Rel(web_app, api_backend, "Запросы к REST API (/api/population, /api/forecast и др.)", "HTTPS/JSON")
+Rel(mobile_app, api_backend, "Запросы к REST API", "HTTPS/JSON")
+Rel(api_backend, data_store, "Чтение показателей и агрегатов", "Файловый I/O (Parquet)")
+Rel(api_backend, db_service, "Чтение и запись служебных данных", "SQL/TCP 5432")
+Rel(data_pipeline, data_store, "Запись подготовленных данных", "Файловый I/O (Parquet)")
+Rel(data_pipeline, rosstat, "Получение официальных демографических показателей", "HTTPS/REST")
+Rel(data_pipeline, emiss, "Получение статистических данных по регионам", "HTTPS/REST")
+Rel(data_pipeline, gdrive, "Скачивание исходных массивов (CSV)", "HTTPS (gdown)")
+Rel(api_backend, gemini_api, "Генерация аналитического заключения", "HTTPS/JSON (REST)")
+@enduml

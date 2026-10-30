@@ -1,0 +1,44 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+LAYOUT_WITH_LEGEND()
+
+title Диаграмма компонентов Backend API — ИС аналитического мониторинга и прогнозирования динамики населения РФ (DemoScope)
+
+' === Клиентские контейнеры (внешние по отношению к бэкенду) ===
+Container(web_app, "Веб-приложение (SPA)", "React 19 / Vite", "Клиентский интерфейс")
+Container(mobile_app, "Мобильное приложение", "React Native", "Мобильный клиент")
+
+' === Граница ключевого контейнера: Backend API ===
+Container_Boundary(api_backend, "Backend API (Python 3.10 / FastAPI)") {
+  Component(api_router, "API Router", "FastAPI Router, Pydantic", "Маршрутизация REST-запросов, валидация схем, CORS")
+  Component(forecast_comp, "Сервис прогнозирования", "Statsmodels", "Выбор алгоритма, сценарии, доверительные интервалы")
+  Component(analytics_comp, "Сервис аналитики", "Pandas", "Агрегации, тепловые карты, сравнение территорий")
+  Component(report_comp, "Сервис отчётов и алертов", "Python Module", "Аналитические справки (LLM), радар проблем")
+  Component(data_repo, "Репозиторий данных", "PyArrow / Parquet", "Слой доступа к озеру данных, кэширование")
+  Component(db_repo, "Репозиторий служебной БД", "SQLAlchemy", "Аккаунты, сессии, история, кэш прогнозов")
+}
+
+' === Хранилища и внешние системы ===
+ContainerDb(data_store, "Хранилище демографических данных", "Parquet / PyArrow", "Показатели Росстата и ЕМИСС")
+ContainerDb(db_service, "Служебная БД", "PostgreSQL 16", "Служебные данные системы")
+System_Ext(gemini_api, "Google Gemini API", "LLM-сервис заключений")
+
+' === Связи: клиентские запросы (сетевые) ===
+Rel(web_app, api_router, "Запросы к REST API", "HTTPS/JSON")
+Rel(mobile_app, api_router, "Запросы к REST API", "HTTPS/JSON")
+
+' === Связи: внутрипроцессные вызовы (Python Call) ===
+Rel(api_router, analytics_comp, "Вызов функций агрегации", "Python Call")
+Rel(api_router, forecast_comp, "Вызов точки входа прогнозов", "Python Call")
+Rel(api_router, report_comp, "Вызов генерации справок", "Python Call")
+Rel(forecast_comp, data_repo, "Чтение временных рядов", "Python Call")
+Rel(analytics_comp, data_repo, "Чтение показателей", "Python Call")
+Rel(report_comp, data_repo, "Чтение данных для справок", "Python Call")
+Rel(forecast_comp, db_repo, "Кэш прогнозов (чтение/запись)", "Python Call")
+Rel(report_comp, db_repo, "Сохранение истории отчётов", "Python Call")
+
+' === Связи: доступ к хранилищам и внешнему LLM (сетевые) ===
+Rel(data_repo, data_store, "Чтение Parquet-фрагментов", "Файловый I/O (Parquet)")
+Rel(db_repo, db_service, "Выполнение SQL-запросов", "SQL/TCP 5432")
+Rel(report_comp, gemini_api, "Запрос генерации текста", "HTTPS/JSON (REST)")
+@enduml

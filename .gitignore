@@ -1,0 +1,17 @@
+# OS & Editor
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.tmp
+*.pyc
+
+# Node & Build Temp
+node_modules/
+tools/docxgen/render/
